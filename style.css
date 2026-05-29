@@ -1,0 +1,277 @@
+/* styles.css */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #1e1b4b, #0f172a);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.card-wide {
+  max-width: 640px;
+}
+
+h1 {
+  text-align: center;
+  margin: 0 0 10px;
+  font-size: 32px;
+}
+
+p {
+  text-align: center;
+  color: #cbd5e1;
+  margin: 0 0 25px;
+  line-height: 1.5;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35);
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #7c3aed, #06b6d4);
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.note {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #cbd5e1;
+  text-align: center;
+}
+
+.note strong {
+  color: #e2e8f0;
+}
+
+.error {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.link-row {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #cbd5e1;
+}
+
+.link-row a {
+  color: #38bdf8;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.link-row a:hover {
+  text-decoration: underline;
+}
+
+.success {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #bbf7d0;
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.section {
+  margin-bottom: 28px;
+}
+
+.section-title {
+  font-size: 18px;
+  margin: 0 0 14px;
+  text-align: left;
+  color: #e2e8f0;
+}
+
+.applications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.application-item {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.application-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.application-label {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.status {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+.feedback-block {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feedback-label {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: left;
+}
+
+.feedback-text {
+  margin: 0;
+  font-size: 14px;
+  color: #e2e8f0;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 14px;
+  color: #e2e8f0;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.radio-option input {
+  width: auto;
+  margin: 0;
+  accent-color: #7c3aed;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.data-table th {
+  color: #94a3b8;
+  font-weight: normal;
+  font-size: 12px;
+}
+
+.status-select {
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  min-width: 120px;
+}

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Корочки.есть — Мои заявки</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card card-wide">
+    <h1>Корочки.есть</h1>
+    <p id="welcomeText">Просмотр ваших заявок</p>
+
+    <section class="section">
+      <h2 class="section-title">Мои заявки</h2>
+      <div id="applicationsList" class="applications-list"></div>
+      <p id="emptyApplications" class="note" hidden>У вас пока нет поданных заявок. Оформите заявку в личном кабинете.</p>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Отзыв об образовательных услугах</h2>
+      <form id="feedbackForm">
+        <div class="field">
+          <label for="rating">Оценка качества</label>
+          <select id="rating" name="rating" required>
+            <option value="">Выберите оценку</option>
+            <option value="5">Отлично</option>
+            <option value="4">Хорошо</option>
+            <option value="3">Удовлетворительно</option>
+            <option value="2">Плохо</option>
+            <option value="1">Очень плохо</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="feedbackText">Текст отзыва</label>
+          <textarea
+            id="feedbackText"
+            name="feedback"
+            rows="4"
+            placeholder="Опишите ваше впечатление от курсов и качества обучения"
+            required
+            minlength="10"
+          ></textarea>
+        </div>
+        <div id="feedbackError" class="error" role="alert" hidden></div>
+        <div id="feedbackSuccess" class="success" role="status" hidden></div>
+        <button type="submit">Отправить отзыв</button>
+      </form>
+      <div id="myFeedback" class="feedback-block" hidden>
+        <p class="feedback-label">Ваш последний отзыв:</p>
+        <p id="myFeedbackText" class="feedback-text"></p>
+      </div>
+    </section>
+
+    <p class="link-row">
+      <a href="dashboard.html">Оставить новую заявку</a>
+      ·
+      <a href="#" id="logoutLink">Выйти</a>
+    </p>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const currentUser = sessionStorage.getItem("currentUser");
+    if (!currentUser) window.location.href = "login.html";
+
+    const welcomeText = document.getElementById("welcomeText");
+    const applicationsList = document.getElementById("applicationsList");
+    const emptyApplications = document.getElementById("emptyApplications");
+    const feedbackForm = document.getElementById("feedbackForm");
+    const feedbackError = document.getElementById("feedbackError");
+    const feedbackSuccess = document.getElementById("feedbackSuccess");
+    const myFeedback = document.getElementById("myFeedback");
+    const myFeedbackText = document.getElementById("myFeedbackText");
+
+    welcomeText.textContent =
+      "Здравствуйте, " + currentUser + "! Здесь вы можете просмотреть свои заявки и оставить отзыв.";
+
+    const ratingLabels = {
+      "5": "Отлично", "4": "Хорошо", "3": "Удовлетворительно",
+      "2": "Плохо", "1": "Очень плохо",
+    };
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleDateString("ru-RU", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+      });
+    }
+
+    async function renderApplications() {
+      const { ok, data } = await apiRequest("/applications");
+      applicationsList.innerHTML = "";
+
+      if (!ok || !data.applications || data.applications.length === 0) {
+        emptyApplications.hidden = false;
+        return;
+      }
+
+      emptyApplications.hidden = true;
+      data.applications.forEach(function (app) {
+        const item = document.createElement("article");
+        item.className = "application-item";
+        item.innerHTML =
+          "<div class=\"application-row\"><span class=\"application-label\">Курс</span><span>" + app.course + "</span></div>" +
+          "<div class=\"application-row\"><span class=\"application-label\">Начало обучения</span><span>" + app.startDate + "</span></div>" +
+          "<div class=\"application-row\"><span class=\"application-label\">Оплата</span><span>" + app.paymentLabel + "</span></div>" +
+          "<div class=\"application-row\"><span class=\"application-label\">Дата подачи</span><span>" + formatDate(app.createdAt) + "</span></div>" +
+          "<div class=\"application-row\"><span class=\"application-label\">Статус</span><span class=\"status\">" + app.status + "</span></div>";
+        applicationsList.appendChild(item);
+      });
+    }
+
+    async function renderFeedback() {
+      const { ok, data } = await apiRequest("/feedback");
+      if (!ok || !data.feedback) {
+        myFeedback.hidden = true;
+        return;
+      }
+      myFeedback.hidden = false;
+      myFeedbackText.textContent =
+        ratingLabels[data.feedback.rating] + " (" + formatDate(data.feedback.createdAt) + "): " + data.feedback.text;
+    }
+
+    feedbackForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      feedbackError.hidden = true;
+      feedbackSuccess.hidden = true;
+
+      const rating = document.getElementById("rating").value;
+      const text = document.getElementById("feedbackText").value.trim();
+
+      if (!rating) {
+        feedbackError.textContent = "Выберите оценку качества образовательных услуг.";
+        feedbackError.hidden = false;
+        return;
+      }
+      if (text.length < 10) {
+        feedbackError.textContent = "Отзыв должен содержать не менее 10 символов.";
+        feedbackError.hidden = false;
+        return;
+      }
+
+      const { ok, data } = await apiRequest("/feedback", {
+        method: "POST",
+        body: JSON.stringify({ rating: parseInt(rating, 10), text }),
+      });
+
+      if (!ok) {
+        feedbackError.textContent = data.message || "Ошибка сохранения отзыва.";
+        feedbackError.hidden = false;
+        return;
+      }
+
+      feedbackSuccess.textContent = data.message;
+      feedbackSuccess.hidden = false;
+      feedbackForm.reset();
+      renderFeedback();
+    });
+
+    document.getElementById("logoutLink").addEventListener("click", async function (event) {
+      event.preventDefault();
+      await apiRequest("/logout", { method: "POST" });
+      sessionStorage.clear();
+      window.location.href = "login.html";
+    });
+
+    renderApplications();
+    renderFeedback();
+  </script>
+</body>
+</html>

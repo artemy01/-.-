@@ -1,0 +1,18 @@
+{
+  "folders": [
+    {
+      "name": "Корочки.есть",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/node_modules": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "christian-kohler.npm-intellisense"
+    ]
+  }
+}

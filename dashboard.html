@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Корочки.есть — Формирование заявки</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="card">
+    <h1>Корочки.есть</h1>
+    <p id="welcomeText">Формирование заявки на обучение</p>
+
+    <form id="applicationForm" action="#" method="post" novalidate>
+      <div class="field">
+        <label for="course">Наименование курса</label>
+        <input
+          type="text"
+          id="course"
+          name="course"
+          placeholder="Например: Электрогазосварщик"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="startDate">Желаемая дата начала обучения</label>
+        <input
+          type="text"
+          id="startDate"
+          name="startDate"
+          placeholder="дд.мм.гггг"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <span class="field-label">Способ оплаты</span>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="payment" value="cash" />
+            Наличными
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="payment" value="phone" />
+            Переводом по номеру телефона
+          </label>
+        </div>
+      </div>
+
+      <div id="formError" class="error" role="alert" hidden></div>
+      <div id="formSuccess" class="success" role="status" hidden></div>
+
+      <button type="submit">Отправить</button>
+    </form>
+
+    <p class="link-row">
+      <a href="applications.html">Мои заявки и отзывы</a>
+      ·
+      <a href="#" id="logoutLink">Выйти</a>
+    </p>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    const currentUser = sessionStorage.getItem("currentUser");
+    if (!currentUser) window.location.href = "login.html";
+
+    document.getElementById("welcomeText").textContent =
+      "Здравствуйте, " + currentUser + "! Заполните заявку для отправки администратору портала.";
+
+    const applicationForm = document.getElementById("applicationForm");
+    const formError = document.getElementById("formError");
+    const formSuccess = document.getElementById("formSuccess");
+    const datePattern = /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(19|20)\d{2}$/;
+
+    applicationForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      formError.hidden = true;
+      formSuccess.hidden = true;
+
+      const course = document.getElementById("course").value.trim();
+      const startDate = document.getElementById("startDate").value.trim();
+      const paymentInput = document.querySelector('input[name="payment"]:checked');
+
+      if (!course) {
+        formError.textContent = "Введите наименование курса.";
+        formError.hidden = false;
+        return;
+      }
+      if (!startDate || !datePattern.test(startDate)) {
+        formError.textContent = "Введите дату в формате дд.мм.гггг.";
+        formError.hidden = false;
+        return;
+      }
+      if (!paymentInput) {
+        formError.textContent = "Выберите удобный способ оплаты.";
+        formError.hidden = false;
+        return;
+      }
+
+      const { ok, data } = await apiRequest("/applications", {
+        method: "POST",
+        body: JSON.stringify({ course, startDate, payment: paymentInput.value }),
+      });
+
+      if (!ok) {
+        formError.textContent = data.message || "Ошибка отправки заявки.";
+        formError.hidden = false;
+        return;
+      }
+
+      formSuccess.textContent = data.message;
+      formSuccess.hidden = false;
+      applicationForm.reset();
+    });
+
+    document.getElementById("logoutLink").addEventListener("click", async function (event) {
+      event.preventDefault();
+      await apiRequest("/logout", { method: "POST" });
+      sessionStorage.clear();
+      window.location.href = "login.html";
+    });
+  </script>
+</body>
+</html>

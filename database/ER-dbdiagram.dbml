@@ -1,0 +1,38 @@
+// Вставьте на https://dbdiagram.io → Export PNG/PDF
+
+Table users {
+  id integer [primary key, increment, note: 'Пользователь портала']
+  login varchar(50) [unique, not null]
+  password_hash varchar(255) [not null]
+  fio varchar(150) [not null, note: 'ФИО']
+  phone varchar(20) [not null]
+  email varchar(100) [unique, not null]
+  created_at datetime [not null, default: `datetime('now')`]
+}
+
+Table applications {
+  id integer [primary key, increment, note: 'Заявка на курс']
+  user_id integer [not null, ref: > users.id]
+  course varchar(200) [not null, note: 'Наименование курса']
+  start_date varchar(10) [not null, note: 'дд.мм.гггг']
+  payment_type varchar [not null, note: 'cash | phone']
+  status varchar [not null, default: 'Новая', note: 'Новая | Идет обучение | Обучение завершено']
+  created_at datetime [not null, default: `datetime('now')`]
+}
+
+Table feedbacks {
+  id integer [primary key, increment, note: 'Отзыв об услугах']
+  user_id integer [unique, not null, ref: - users.id, note: 'Один отзыв на пользователя']
+  rating integer [not null, note: '1–5']
+  feedback_text text [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table admins {
+  id integer [primary key, increment, note: 'Администратор портала']
+  login varchar(50) [unique, not null]
+  password_hash varchar(255) [not null]
+}
+
+// admins не связана с users — отдельный вход в систему
