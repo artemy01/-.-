@@ -29,9 +29,12 @@ Express API, SQLite (node:sqlite), конфигурация VS Code, убран�
 EOF
 )"
 
+DEFAULT_REMOTE="https://github.com/radamir/gospodypomogy.git"
+
 if ! git remote get-url origin >/dev/null 2>&1; then
   echo ""
-  read -r -p "URL репозитория (например https://github.com/ВАШ_ЛОГИН/gospodypomogy.git): " REMOTE_URL
+  read -r -p "URL репозитория [$DEFAULT_REMOTE]: " REMOTE_URL
+  REMOTE_URL="${REMOTE_URL:-$DEFAULT_REMOTE}"
   git remote add origin "$REMOTE_URL"
 fi
 
