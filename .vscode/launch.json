@@ -11,7 +11,13 @@
         "PORT": "3000"
       },
       "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "action": "openExternally",
+        "killOnServerStop": true,
+        "pattern": "http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s/login.html"
+      }
     },
     {
       "type": "node",
@@ -24,7 +30,13 @@
         "PORT": "3000"
       },
       "console": "integratedTerminal",
-      "skipFiles": ["<node_internals>/**"]
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "action": "openExternally",
+        "killOnServerStop": true,
+        "pattern": "http://localhost:([0-9]+)",
+        "uriFormat": "http://localhost:%s/login.html"
+      }
     }
   ]
 }

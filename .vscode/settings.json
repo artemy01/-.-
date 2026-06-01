@@ -8,5 +8,7 @@
   },
   "editor.tabSize": 2,
   "html.format.wrapLineLength": 120,
-  "debug.javascript.autoAttachFilter": "onlyWithFlag"
+  "debug.javascript.autoAttachFilter": "onlyWithFlag",
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "npm.npmPath": "npm.cmd"
 }

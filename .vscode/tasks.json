@@ -3,18 +3,31 @@
   "tasks": [
     {
       "label": "npm: install",
-      "type": "npm",
-      "script": "install",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
-        "panel": "shared"
+        "panel": "shared",
+        "focus": true
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
       }
     },
     {
       "label": "npm: start",
-      "type": "npm",
-      "script": "start",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["start"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
       "isBackground": true,
       "presentation": {
@@ -28,8 +41,12 @@
     },
     {
       "label": "npm: dev",
-      "type": "npm",
-      "script": "dev",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
       "isBackground": true,
       "presentation": {
@@ -43,8 +60,12 @@
     },
     {
       "label": "npm: db:init",
-      "type": "npm",
-      "script": "db:init",
+      "type": "shell",
+      "command": "npm.cmd",
+      "args": ["run", "db:init"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
       "presentation": {
         "reveal": "always",
@@ -54,9 +75,12 @@
     {
       "label": "Открыть сайт в браузере",
       "type": "shell",
-      "command": "open http://localhost:3000/login.html",
+      "command": "start http://localhost:3000/login.html",
       "windows": {
         "command": "start http://localhost:3000/login.html"
+      },
+      "osx": {
+        "command": "open http://localhost:3000/login.html"
       },
       "linux": {
         "command": "xdg-open http://localhost:3000/login.html"
