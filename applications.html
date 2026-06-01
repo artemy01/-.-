@@ -17,12 +17,16 @@
       <p id="emptyApplications" class="note" hidden>У вас пока нет поданных заявок. Оформите заявку в личном кабинете.</p>
     </section>
 
-    <section class="section">
+    <section class="section" id="feedbackSection">
       <h2 class="section-title">Отзыв об образовательных услугах</h2>
+      <p id="feedbackLockedNote" class="info-banner" hidden>
+        Отзыв можно оставить только после завершения обучения по курсу (когда администратор установит статус «Обучение завершено»).
+      </p>
+
       <form id="feedbackForm">
         <div class="field">
           <label for="rating">Оценка качества</label>
-          <select id="rating" name="rating" required>
+          <select id="rating" name="rating">
             <option value="">Выберите оценку</option>
             <option value="5">Отлично</option>
             <option value="4">Хорошо</option>
@@ -30,6 +34,7 @@
             <option value="2">Плохо</option>
             <option value="1">Очень плохо</option>
           </select>
+          <p id="error-rating" class="field-error" hidden></p>
         </div>
         <div class="field">
           <label for="feedbackText">Текст отзыва</label>
@@ -38,16 +43,15 @@
             name="feedback"
             rows="4"
             placeholder="Опишите ваше впечатление от курсов и качества обучения"
-            required
-            minlength="10"
           ></textarea>
+          <p id="error-feedbackText" class="field-error" hidden></p>
         </div>
-        <div id="feedbackError" class="error" role="alert" hidden></div>
         <div id="feedbackSuccess" class="success" role="status" hidden></div>
-        <button type="submit">Отправить отзыв</button>
+        <button type="submit" id="feedbackSubmitBtn">Отправить отзыв</button>
       </form>
+
       <div id="myFeedback" class="feedback-block" hidden>
-        <p class="feedback-label">Ваш последний отзыв:</p>
+        <p class="feedback-label">Ваш отзыв:</p>
         <p id="myFeedbackText" class="feedback-text"></p>
       </div>
     </section>
@@ -60,6 +64,7 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/form-utils.js"></script>
   <script>
     const currentUser = sessionStorage.getItem("currentUser");
     if (!currentUser) window.location.href = "login.html";
@@ -68,10 +73,14 @@
     const applicationsList = document.getElementById("applicationsList");
     const emptyApplications = document.getElementById("emptyApplications");
     const feedbackForm = document.getElementById("feedbackForm");
-    const feedbackError = document.getElementById("feedbackError");
+    const feedbackLockedNote = document.getElementById("feedbackLockedNote");
+    const feedbackSubmitBtn = document.getElementById("feedbackSubmitBtn");
     const feedbackSuccess = document.getElementById("feedbackSuccess");
     const myFeedback = document.getElementById("myFeedback");
     const myFeedbackText = document.getElementById("myFeedbackText");
+    const feedbackFields = ["rating", "feedbackText"];
+
+    let canLeaveFeedback = false;
 
     welcomeText.textContent =
       "Здравствуйте, " + currentUser + "! Здесь вы можете просмотреть свои заявки и оставить отзыв.";
@@ -87,6 +96,16 @@
       });
     }
 
+    function setFeedbackFormEnabled(enabled) {
+      canLeaveFeedback = enabled;
+      feedbackForm.querySelectorAll("select, textarea, button").forEach(function (el) {
+        el.disabled = !enabled;
+      });
+      feedbackLockedNote.hidden = enabled;
+    }
+
+    bindClearOnInput(feedbackFields);
+
     async function renderApplications() {
       const { ok, data } = await apiRequest("/applications");
       applicationsList.innerHTML = "";
@@ -100,45 +119,61 @@
       data.applications.forEach(function (app) {
         const item = document.createElement("article");
         item.className = "application-item";
+        const statusClass =
+          app.status === "Обучение завершено" ? "status status-done" : "status";
         item.innerHTML =
           "<div class=\"application-row\"><span class=\"application-label\">Курс</span><span>" + app.course + "</span></div>" +
           "<div class=\"application-row\"><span class=\"application-label\">Начало обучения</span><span>" + app.startDate + "</span></div>" +
           "<div class=\"application-row\"><span class=\"application-label\">Оплата</span><span>" + app.paymentLabel + "</span></div>" +
           "<div class=\"application-row\"><span class=\"application-label\">Дата подачи</span><span>" + formatDate(app.createdAt) + "</span></div>" +
-          "<div class=\"application-row\"><span class=\"application-label\">Статус</span><span class=\"status\">" + app.status + "</span></div>";
+          "<div class=\"application-row\"><span class=\"application-label\">Статус</span><span class=\"" + statusClass + "\">" + app.status + "</span></div>";
         applicationsList.appendChild(item);
       });
     }
 
     async function renderFeedback() {
       const { ok, data } = await apiRequest("/feedback");
-      if (!ok || !data.feedback) {
+      if (!ok) return;
+
+      setFeedbackFormEnabled(!!data.canLeaveFeedback);
+
+      if (data.feedback) {
+        myFeedback.hidden = false;
+        feedbackForm.hidden = true;
+        myFeedbackText.textContent =
+          ratingLabels[data.feedback.rating] + " (" + formatDate(data.feedback.createdAt) + "): " + data.feedback.text;
+      } else {
         myFeedback.hidden = true;
-        return;
+        feedbackForm.hidden = false;
       }
-      myFeedback.hidden = false;
-      myFeedbackText.textContent =
-        ratingLabels[data.feedback.rating] + " (" + formatDate(data.feedback.createdAt) + "): " + data.feedback.text;
     }
 
     feedbackForm.addEventListener("submit", async function (event) {
       event.preventDefault();
-      feedbackError.hidden = true;
+      clearFormErrors(feedbackFields);
       feedbackSuccess.hidden = true;
+
+      if (!canLeaveFeedback) {
+        feedbackLockedNote.hidden = false;
+        return;
+      }
 
       const rating = document.getElementById("rating").value;
       const text = document.getElementById("feedbackText").value.trim();
+      let valid = true;
 
       if (!rating) {
-        feedbackError.textContent = "Выберите оценку качества образовательных услуг.";
-        feedbackError.hidden = false;
-        return;
+        setFieldError("rating", "Выберите оценку качества образовательных услуг.");
+        valid = false;
       }
-      if (text.length < 10) {
-        feedbackError.textContent = "Отзыв должен содержать не менее 10 символов.";
-        feedbackError.hidden = false;
-        return;
+      if (!text) {
+        setFieldError("feedbackText", "Введите текст отзыва.");
+        valid = false;
+      } else if (text.length < 10) {
+        setFieldError("feedbackText", "Отзыв должен содержать не менее 10 символов.");
+        valid = false;
       }
+      if (!valid) return;
 
       const { ok, data } = await apiRequest("/feedback", {
         method: "POST",
@@ -146,8 +181,12 @@
       });
 
       if (!ok) {
-        feedbackError.textContent = data.message || "Ошибка сохранения отзыва.";
-        feedbackError.hidden = false;
+        const msg = data.message || "Ошибка сохранения отзыва.";
+        if (msg.includes("завершен")) {
+          setFeedbackFormEnabled(false);
+        } else {
+          setFieldError("feedbackText", msg);
+        }
         return;
       }
 

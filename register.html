@@ -11,43 +11,38 @@
     <h1>Корочки.есть</h1>
     <p>Регистрация в системе записи на онлайн-курсы дополнительного профессионального образования</p>
 
-    <form id="registerForm" action="#" method="post">
+    <form id="registerForm" action="#" method="post" novalidate>
       <div class="field">
         <label for="login">Логин</label>
-        <input type="text" id="login" name="login" placeholder="user123" required minlength="6" pattern="[A-Za-z0-9]{6,}" />
+        <input type="text" id="login" name="login" placeholder="user123" autocomplete="username" />
+        <p id="error-login" class="field-error" hidden></p>
       </div>
 
       <div class="field">
         <label for="password">Пароль</label>
-        <input type="password" id="password" name="password" placeholder="Минимум 8 символов" required minlength="8" />
+        <input type="password" id="password" name="password" placeholder="Минимум 8 символов" autocomplete="new-password" />
+        <p id="error-password" class="field-error" hidden></p>
       </div>
 
       <div class="field">
         <label for="fio">ФИО</label>
-        <input type="text" id="fio" name="fio" placeholder="Иванов Иван Иванович" required pattern="[А-Яа-яЁё\s]+" />
+        <input type="text" id="fio" name="fio" placeholder="Иванов Иван Иванович" />
+        <p id="error-fio" class="field-error" hidden></p>
       </div>
 
       <div class="field">
         <label for="phone">Телефон</label>
-        <input
-          type="text"
-          id="phone"
-          name="phone"
-          placeholder="8(999)999-99-99"
-          required
-          pattern="8\([0-9]{3}\)[0-9]{3}-[0-9]{2}-[0-9]{2}"
-          title="Формат: 8(999)999-99-99"
-        />
+        <input type="text" id="phone" name="phone" placeholder="8(999)999-99-99" />
+        <p id="error-phone" class="field-error" hidden></p>
       </div>
 
       <div class="field">
         <label for="email">Электронная почта</label>
-        <input type="email" id="email" name="email" placeholder="mail@example.com" required />
+        <input type="email" id="email" name="email" placeholder="mail@example.com" autocomplete="email" />
+        <p id="error-email" class="field-error" hidden></p>
       </div>
 
-      <div id="registerError" class="error" role="alert" hidden></div>
-
-      <button type="submit">Создать пользователя</button>
+      <button type="submit">Зарегистрироваться</button>
       <div class="note">Все поля обязательны для заполнения</div>
     </form>
 
@@ -58,14 +53,19 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/form-utils.js"></script>
   <script>
     const registerForm = document.getElementById("registerForm");
-    const registerError = document.getElementById("registerError");
+    const fields = ["login", "password", "fio", "phone", "email"];
     const phonePattern = /^8\([0-9]{3}\)[0-9]{3}-[0-9]{2}-[0-9]{2}$/;
+    const loginPattern = /^[A-Za-z0-9]{6,}$/;
+    const fioPattern = /^[А-Яа-яЁё\s-]+$/;
 
-    registerForm.addEventListener("submit", async function (event) {
-      event.preventDefault();
-      registerError.hidden = true;
+    bindClearOnInput(fields);
+
+    function validateRegisterForm() {
+      clearFormErrors(fields);
+      let valid = true;
 
       const login = document.getElementById("login").value.trim();
       const password = document.getElementById("password").value;
@@ -73,21 +73,78 @@
       const phone = document.getElementById("phone").value.trim();
       const email = document.getElementById("email").value.trim();
 
-      if (!phonePattern.test(phone)) {
-        registerError.textContent =
-          "Неверный формат телефона. Укажите номер в виде 8(999)999-99-99.";
-        registerError.hidden = false;
-        return;
+      if (!login) {
+        setFieldError("login", "Введите логин.");
+        valid = false;
+      } else if (!loginPattern.test(login)) {
+        setFieldError("login", "Логин: только латиница и цифры, минимум 6 символов.");
+        valid = false;
       }
+
+      if (!password) {
+        setFieldError("password", "Введите пароль.");
+        valid = false;
+      } else if (password.length < 8) {
+        setFieldError("password", "Пароль должен быть не короче 8 символов.");
+        valid = false;
+      }
+
+      if (!fio) {
+        setFieldError("fio", "Введите ФИО.");
+        valid = false;
+      } else if (!fioPattern.test(fio)) {
+        setFieldError("fio", "ФИО: только кириллица, пробелы и дефис.");
+        valid = false;
+      }
+
+      if (!phone) {
+        setFieldError("phone", "Введите телефон.");
+        valid = false;
+      } else if (!phonePattern.test(phone)) {
+        setFieldError("phone", "Формат телефона: 8(999)999-99-99.");
+        valid = false;
+      }
+
+      if (!email) {
+        setFieldError("email", "Введите e-mail.");
+        valid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setFieldError("email", "Некорректный адрес e-mail.");
+        valid = false;
+      }
+
+      return valid
+        ? { login, password, fio, phone, email }
+        : null;
+    }
+
+    registerForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      const payload = validateRegisterForm();
+      if (!payload) return;
 
       const { ok, data } = await apiRequest("/register", {
         method: "POST",
-        body: JSON.stringify({ login, password, fio, phone, email }),
+        body: JSON.stringify(payload),
       });
 
       if (!ok) {
-        registerError.textContent = data.message || "Ошибка регистрации.";
-        registerError.hidden = false;
+        const msg = data.message || "Ошибка регистрации.";
+        if (msg.includes("логин")) {
+          setFieldError("login", msg);
+        } else if (msg.includes("e-mail") || msg.includes("mail")) {
+          setFieldError("email", msg);
+        } else if (msg.includes("телефон")) {
+          setFieldError("phone", msg);
+        } else if (msg.includes("ФИО")) {
+          setFieldError("fio", msg);
+        } else if (msg.includes("Пароль")) {
+          setFieldError("password", msg);
+        } else if (msg.includes("Логин")) {
+          setFieldError("login", msg);
+        } else {
+          setFieldError("login", msg);
+        }
         return;
       }
 

@@ -14,13 +14,17 @@
     <form id="applicationForm" action="#" method="post" novalidate>
       <div class="field">
         <label for="course">Наименование курса</label>
-        <input
-          type="text"
-          id="course"
-          name="course"
-          placeholder="Например: Электрогазосварщик"
-          required
-        />
+        <select id="course" name="course" required>
+          <option value="">Выберите курс</option>
+          <option value="Основы алгоритмизации и программирования">
+            Основы алгоритмизации и программирования
+          </option>
+          <option value="Основы веб-дизайна">Основы веб-дизайна</option>
+          <option value="Основы проектирования баз данных">
+            Основы проектирования баз данных
+          </option>
+        </select>
+        <p id="error-course" class="field-error" hidden></p>
       </div>
 
       <div class="field">
@@ -29,12 +33,13 @@
           type="text"
           id="startDate"
           name="startDate"
-          placeholder="дд.мм.гггг"
-          required
+          placeholder="ДД.ММ.ГГГГ"
+          inputmode="numeric"
         />
+        <p id="error-startDate" class="field-error" hidden></p>
       </div>
 
-      <div class="field">
+      <div class="field" id="payment">
         <span class="field-label">Способ оплаты</span>
         <div class="radio-group">
           <label class="radio-option">
@@ -46,9 +51,9 @@
             Переводом по номеру телефона
           </label>
         </div>
+        <p id="error-payment" class="field-error" hidden></p>
       </div>
 
-      <div id="formError" class="error" role="alert" hidden></div>
       <div id="formSuccess" class="success" role="status" hidden></div>
 
       <button type="submit">Отправить</button>
@@ -62,6 +67,7 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/form-utils.js"></script>
   <script>
     const currentUser = sessionStorage.getItem("currentUser");
     if (!currentUser) window.location.href = "login.html";
@@ -70,34 +76,48 @@
       "Здравствуйте, " + currentUser + "! Заполните заявку для отправки администратору портала.";
 
     const applicationForm = document.getElementById("applicationForm");
-    const formError = document.getElementById("formError");
     const formSuccess = document.getElementById("formSuccess");
     const datePattern = /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(19|20)\d{2}$/;
+    const fields = ["course", "startDate", "payment"];
+
+    document.getElementById("course").addEventListener("change", function () {
+      clearFieldError("course");
+    });
+    document.getElementById("startDate").addEventListener("input", function () {
+      clearFieldError("startDate");
+    });
+    document.querySelectorAll('input[name="payment"]').forEach(function (el) {
+      el.addEventListener("change", function () {
+        clearFieldError("payment");
+      });
+    });
 
     applicationForm.addEventListener("submit", async function (event) {
       event.preventDefault();
-      formError.hidden = true;
+      clearFormErrors(fields);
       formSuccess.hidden = true;
 
-      const course = document.getElementById("course").value.trim();
+      const course = document.getElementById("course").value;
       const startDate = document.getElementById("startDate").value.trim();
       const paymentInput = document.querySelector('input[name="payment"]:checked');
+      let valid = true;
 
       if (!course) {
-        formError.textContent = "Введите наименование курса.";
-        formError.hidden = false;
-        return;
+        setFieldError("course", "Выберите курс из списка.");
+        valid = false;
       }
-      if (!startDate || !datePattern.test(startDate)) {
-        formError.textContent = "Введите дату в формате дд.мм.гггг.";
-        formError.hidden = false;
-        return;
+      if (!startDate) {
+        setFieldError("startDate", "Укажите желаемую дату начала обучения.");
+        valid = false;
+      } else if (!datePattern.test(startDate)) {
+        setFieldError("startDate", "Дата должна быть в формате ДД.ММ.ГГГГ.");
+        valid = false;
       }
       if (!paymentInput) {
-        formError.textContent = "Выберите удобный способ оплаты.";
-        formError.hidden = false;
-        return;
+        setFieldError("payment", "Выберите способ оплаты.");
+        valid = false;
       }
+      if (!valid) return;
 
       const { ok, data } = await apiRequest("/applications", {
         method: "POST",
@@ -105,8 +125,11 @@
       });
 
       if (!ok) {
-        formError.textContent = data.message || "Ошибка отправки заявки.";
-        formError.hidden = false;
+        const msg = data.message || "Ошибка отправки заявки.";
+        if (msg.includes("курс")) setFieldError("course", msg);
+        else if (msg.includes("Дата") || msg.includes("дат")) setFieldError("startDate", msg);
+        else if (msg.includes("оплат")) setFieldError("payment", msg);
+        else setFieldError("course", msg);
         return;
       }
 

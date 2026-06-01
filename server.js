@@ -15,8 +15,26 @@ function json(res, data, code = 200) {
   return res.status(code).json(data);
 }
 
+const COURSES = [
+  "Основы алгоритмизации и программирования",
+  "Основы веб-дизайна",
+  "Основы проектирования баз данных",
+];
+
+const APPLICATION_STATUSES = ["Новая", "Идет обучение", "Обучение завершено"];
+
 function paymentLabel(type) {
   return type === "cash" ? "Наличными" : "Переводом по номеру телефона";
+}
+
+function userHasCompletedCourse(userId) {
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok FROM applications
+       WHERE user_id = ? AND status = 'Обучение завершено' LIMIT 1`
+    )
+    .get(userId);
+  return !!row;
 }
 
 function getUserIdByLogin(login) {
@@ -87,6 +105,9 @@ app.post("/api/register", (req, res) => {
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json(res, { success: false, message: "Некорректный e-mail." }, 400);
+  }
+  if (!/^[А-Яа-яЁё\s-]+$/.test(fio)) {
+    return json(res, { success: false, message: "ФИО: только кириллица, пробелы и дефис." }, 400);
   }
 
   const exists = db.prepare("SELECT id FROM users WHERE login = ? LIMIT 1").get(login);
@@ -193,8 +214,8 @@ app.post("/api/applications", (req, res) => {
   const startDate = String(req.body.startDate || "").trim();
   const payment = String(req.body.payment || "");
 
-  if (!course) {
-    return json(res, { success: false, message: "Введите наименование курса." }, 400);
+  if (!course || !COURSES.includes(course)) {
+    return json(res, { success: false, message: "Выберите курс из списка." }, 400);
   }
   if (!/^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(19|20)\d{2}$/.test(startDate)) {
     return json(res, { success: false, message: "Дата в формате дд.мм.гггг." }, 400);
@@ -233,12 +254,15 @@ app.get("/api/feedback", (req, res) => {
     )
     .get(userId);
 
+  const canLeaveFeedback = userHasCompletedCourse(userId);
+
   if (!row) {
-    return json(res, { success: true, feedback: null });
+    return json(res, { success: true, feedback: null, canLeaveFeedback });
   }
 
   return json(res, {
     success: true,
+    canLeaveFeedback,
     feedback: {
       rating: String(row.rating),
       text: row.feedback_text,
@@ -264,6 +288,17 @@ app.post("/api/feedback", (req, res) => {
   }
   if (text.length < 10) {
     return json(res, { success: false, message: "Отзыв должен содержать не менее 10 символов." }, 400);
+  }
+  if (!userHasCompletedCourse(userId)) {
+    return json(
+      res,
+      {
+        success: false,
+        message:
+          "Отзыв доступен только после завершения обучения по курсу (статус «Обучение завершено»).",
+      },
+      403
+    );
   }
 
   db.prepare(
@@ -311,9 +346,7 @@ app.post("/api/admin/applications", (req, res) => {
 
   const id = Number(req.body.id);
   const status = String(req.body.status || "");
-  const allowed = ["Новая", "Идет обучение", "Обучение завершено"];
-
-  if (!id || id <= 0 || !allowed.includes(status)) {
+  if (!id || id <= 0 || !APPLICATION_STATUSES.includes(status)) {
     return json(res, { success: false, message: "Некорректные данные статуса." }, 400);
   }
 

@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="card card-wide">
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <div class="card card-admin">
     <h1>Корочки.есть</h1>
     <p>Панель администратора — все заявки пользователей</p>
 
@@ -15,8 +17,39 @@
       <button type="button" id="clearTestDataBtn" class="button-danger">
         Очистить тестовые данные
       </button>
-      <p id="clearTestDataMsg" class="note admin-msg" hidden></p>
     </div>
+
+    <div class="admin-filters">
+      <div class="field field-inline">
+        <label for="filterSearch">Поиск</label>
+        <input type="search" id="filterSearch" placeholder="Логин или ФИО" />
+      </div>
+      <div class="field field-inline">
+        <label for="filterStatus">Статус</label>
+        <select id="filterStatus">
+          <option value="">Все статусы</option>
+          <option value="Новая">Новая</option>
+          <option value="Идет обучение">Идет обучение</option>
+          <option value="Обучение завершено">Обучение завершено</option>
+        </select>
+      </div>
+      <div class="field field-inline">
+        <label for="filterCourse">Курс</label>
+        <select id="filterCourse">
+          <option value="">Все курсы</option>
+          <option value="Основы алгоритмизации и программирования">
+            Основы алгоритмизации и программирования
+          </option>
+          <option value="Основы веб-дизайна">Основы веб-дизайна</option>
+          <option value="Основы проектирования баз данных">
+            Основы проектирования баз данных
+          </option>
+        </select>
+      </div>
+      <button type="button" id="resetFiltersBtn" class="button-secondary">Сбросить</button>
+    </div>
+
+    <p id="adminStats" class="admin-stats"></p>
 
     <div class="table-wrap">
       <table class="data-table">
@@ -35,7 +68,13 @@
       </table>
     </div>
 
-    <p id="emptyAdmin" class="note" hidden>Заявок от пользователей пока нет.</p>
+    <p id="emptyAdmin" class="note" hidden>Заявок не найдено.</p>
+
+    <div class="pagination" id="pagination" hidden>
+      <button type="button" id="prevPageBtn" class="button-secondary">Назад</button>
+      <span id="pageInfo" class="page-info"></span>
+      <button type="button" id="nextPageBtn" class="button-secondary">Вперёд</button>
+    </div>
 
     <p class="link-row">
       <a href="#" id="logoutLink">Выйти из панели</a>
@@ -43,14 +82,23 @@
   </div>
 
   <script src="js/api.js"></script>
+  <script src="js/form-utils.js"></script>
   <script>
     if (sessionStorage.getItem("isAdmin") !== "true") {
       window.location.href = "login.html";
     }
 
+    const STATUS_OPTIONS = ["Новая", "Идет обучение", "Обучение завершено"];
+    const PAGE_SIZE = 5;
+
+    let allApplications = [];
+    let currentPage = 1;
+
     const tableBody = document.getElementById("adminTableBody");
     const emptyAdmin = document.getElementById("emptyAdmin");
-    const STATUS_OPTIONS = ["Новая", "Идет обучение", "Обучение завершено"];
+    const pagination = document.getElementById("pagination");
+    const pageInfo = document.getElementById("pageInfo");
+    const adminStats = document.getElementById("adminStats");
 
     function formatDate(iso) {
       return new Date(iso).toLocaleDateString("ru-RU", {
@@ -58,21 +106,50 @@
       });
     }
 
-    async function renderTable() {
-      const { ok, data } = await apiRequest("/admin/applications");
-      tableBody.innerHTML = "";
+    function getFilteredApplications() {
+      const search = document.getElementById("filterSearch").value.trim().toLowerCase();
+      const status = document.getElementById("filterStatus").value;
+      const course = document.getElementById("filterCourse").value;
 
-      if (!ok || !data.applications || data.applications.length === 0) {
-        emptyAdmin.hidden = false;
+      return allApplications.filter(function (app) {
+        if (status && app.status !== status) return false;
+        if (course && app.course !== course) return false;
+        if (search) {
+          const hay = (app.login + " " + app.fio).toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderTable() {
+      const filtered = getFilteredApplications();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+      tableBody.innerHTML = "";
+      emptyAdmin.hidden = pageItems.length > 0;
+      pagination.hidden = filtered.length <= PAGE_SIZE;
+
+      adminStats.textContent =
+        "Всего заявок: " + allApplications.length +
+        " · Показано по фильтру: " + filtered.length;
+
+      if (pageItems.length === 0) {
+        pageInfo.textContent = "";
         return;
       }
 
-      emptyAdmin.hidden = true;
-
-      data.applications.forEach(function (app) {
+      pageItems.forEach(function (app) {
         const row = document.createElement("tr");
         const select = document.createElement("select");
         select.className = "status-select";
+        select.setAttribute("aria-label", "Статус заявки " + app.login);
 
         STATUS_OPTIONS.forEach(function (status) {
           const option = document.createElement("option");
@@ -83,18 +160,26 @@
         });
 
         select.addEventListener("change", async function () {
-          await apiRequest("/admin/applications", {
+          const newStatus = select.value;
+          const { ok, data } = await apiRequest("/admin/applications", {
             method: "POST",
-            body: JSON.stringify({ id: app.id, status: select.value }),
+            body: JSON.stringify({ id: app.id, status: newStatus }),
           });
+          if (ok) {
+            app.status = newStatus;
+            showToast("Статус заявки «" + app.login + "» обновлён: " + newStatus, "success");
+          } else {
+            select.value = app.status;
+            showToast(data.message || "Не удалось обновить статус.", "error");
+          }
         });
 
         row.innerHTML =
-          "<td>" + app.login + "</td>" +
-          "<td>" + app.fio + "</td>" +
-          "<td>" + app.course + "</td>" +
-          "<td>" + app.startDate + "</td>" +
-          "<td>" + app.paymentLabel + "</td>" +
+          "<td>" + escapeHtml(app.login) + "</td>" +
+          "<td>" + escapeHtml(app.fio) + "</td>" +
+          "<td>" + escapeHtml(app.course) + "</td>" +
+          "<td>" + escapeHtml(app.startDate) + "</td>" +
+          "<td>" + escapeHtml(app.paymentLabel) + "</td>" +
           "<td>" + formatDate(app.createdAt) + "</td>";
 
         const statusCell = document.createElement("td");
@@ -102,31 +187,76 @@
         row.appendChild(statusCell);
         tableBody.appendChild(row);
       });
+
+      pageInfo.textContent = "Страница " + currentPage + " из " + totalPages;
+      document.getElementById("prevPageBtn").disabled = currentPage <= 1;
+      document.getElementById("nextPageBtn").disabled = currentPage >= totalPages;
     }
 
-    document.getElementById("clearTestDataBtn").addEventListener("click", async function () {
-      const confirmed = confirm(
-        "Удалить всех пользователей, их заявки на курсы и отзывы?\n\nУчётная запись администратора не затрагивается."
-      );
-      if (!confirmed) return;
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
 
-      const msg = document.getElementById("clearTestDataMsg");
-      msg.hidden = true;
+    async function loadApplications() {
+      const { ok, data } = await apiRequest("/admin/applications");
+      if (!ok) {
+        showToast(data.message || "Не удалось загрузить заявки.", "error");
+        return;
+      }
+      allApplications = data.applications || [];
+      currentPage = 1;
+      renderTable();
+    }
+
+    document.getElementById("filterSearch").addEventListener("input", function () {
+      currentPage = 1;
+      renderTable();
+    });
+    document.getElementById("filterStatus").addEventListener("change", function () {
+      currentPage = 1;
+      renderTable();
+    });
+    document.getElementById("filterCourse").addEventListener("change", function () {
+      currentPage = 1;
+      renderTable();
+    });
+    document.getElementById("resetFiltersBtn").addEventListener("click", function () {
+      document.getElementById("filterSearch").value = "";
+      document.getElementById("filterStatus").value = "";
+      document.getElementById("filterCourse").value = "";
+      currentPage = 1;
+      renderTable();
+      showToast("Фильтры сброшены.", "info");
+    });
+    document.getElementById("prevPageBtn").addEventListener("click", function () {
+      currentPage -= 1;
+      renderTable();
+    });
+    document.getElementById("nextPageBtn").addEventListener("click", function () {
+      currentPage += 1;
+      renderTable();
+    });
+
+    document.getElementById("clearTestDataBtn").addEventListener("click", async function () {
+      if (!confirm(
+        "Удалить всех пользователей, их заявки на курсы и отзывы?\n\nУчётная запись администратора не затрагивается."
+      )) return;
 
       const { ok, data } = await apiRequest("/admin/clear-test-data", { method: "POST" });
       if (!ok) {
-        msg.textContent = data.message || "Не удалось очистить данные.";
-        msg.hidden = false;
+        showToast(data.message || "Не удалось очистить данные.", "error");
         return;
       }
-
       const d = data.deleted || {};
-      msg.textContent =
+      showToast(
         "Удалено: пользователей — " + (d.users || 0) +
         ", заявок — " + (d.applications || 0) +
-        ", отзывов — " + (d.feedbacks || 0) + ".";
-      msg.hidden = false;
-      await renderTable();
+        ", отзывов — " + (d.feedbacks || 0) + ".",
+        "success"
+      );
+      await loadApplications();
     });
 
     document.getElementById("logoutLink").addEventListener("click", async function (event) {
@@ -136,7 +266,7 @@
       window.location.href = "login.html";
     });
 
-    renderTable();
+    loadApplications();
   </script>
 </body>
 </html>
