@@ -11,6 +11,13 @@
     <h1>Корочки.есть</h1>
     <p>Панель администратора — все заявки пользователей</p>
 
+    <div class="admin-toolbar">
+      <button type="button" id="clearTestDataBtn" class="button-danger">
+        Очистить тестовые данные
+      </button>
+      <p id="clearTestDataMsg" class="note admin-msg" hidden></p>
+    </div>
+
     <div class="table-wrap">
       <table class="data-table">
         <thead>
@@ -96,6 +103,31 @@
         tableBody.appendChild(row);
       });
     }
+
+    document.getElementById("clearTestDataBtn").addEventListener("click", async function () {
+      const confirmed = confirm(
+        "Удалить всех пользователей, их заявки на курсы и отзывы?\n\nУчётная запись администратора не затрагивается."
+      );
+      if (!confirmed) return;
+
+      const msg = document.getElementById("clearTestDataMsg");
+      msg.hidden = true;
+
+      const { ok, data } = await apiRequest("/admin/clear-test-data", { method: "POST" });
+      if (!ok) {
+        msg.textContent = data.message || "Не удалось очистить данные.";
+        msg.hidden = false;
+        return;
+      }
+
+      const d = data.deleted || {};
+      msg.textContent =
+        "Удалено: пользователей — " + (d.users || 0) +
+        ", заявок — " + (d.applications || 0) +
+        ", отзывов — " + (d.feedbacks || 0) + ".";
+      msg.hidden = false;
+      await renderTable();
+    });
 
     document.getElementById("logoutLink").addEventListener("click", async function (event) {
       event.preventDefault();

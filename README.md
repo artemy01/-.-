@@ -130,3 +130,4 @@ js/api.js       — запросы к API с фронтенда
 - `GET/POST /api/applications` — заявки пользователя
 - `GET/POST /api/feedback` — отзывы
 - `GET/POST /api/admin/applications` — все заявки (админ)
+- `POST /api/admin/clear-test-data` — удалить пользователей, заявки и отзывы (админ)

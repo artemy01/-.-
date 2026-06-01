@@ -94,6 +94,25 @@ button:hover {
   opacity: 0.95;
 }
 
+.button-danger {
+  background: linear-gradient(90deg, #b91c1c, #ea580c);
+}
+
+.admin-toolbar {
+  margin-bottom: 16px;
+}
+
+.admin-toolbar .button-danger {
+  width: auto;
+  padding: 10px 18px;
+  font-size: 14px;
+}
+
+.admin-msg {
+  margin-top: 8px;
+  text-align: left;
+}
+
 .note {
   margin-top: 12px;
   font-size: 12px;

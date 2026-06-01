@@ -325,6 +325,20 @@ app.post("/api/admin/applications", (req, res) => {
   return json(res, { success: true });
 });
 
+app.post("/api/admin/clear-test-data", (req, res) => {
+  if (!requireAdmin(req, res)) return;
+
+  const applications = db.prepare("DELETE FROM applications").run().changes;
+  const feedbacks = db.prepare("DELETE FROM feedbacks").run().changes;
+  const users = db.prepare("DELETE FROM users").run().changes;
+
+  return json(res, {
+    success: true,
+    message: "Тестовые данные удалены.",
+    deleted: { applications, feedbacks, users },
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Корочки.есть: http://localhost:${PORT}/login.html`);
 });
